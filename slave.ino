@@ -1,3 +1,5 @@
+//SLAVE
+
 #include <Wire.h>
 #define MY_ADDR 0x08
 
@@ -8,8 +10,6 @@ uint8_t pedState[3] = {0,0,0};
 volatile uint8_t pendingFase = 0;
 volatile bool faseCambiata = false;
 uint8_t buttonFlags = 0;
-unsigned long lastBeep = 0;
-bool beepOn = false;
 
 void onReceive(int n) { if(Wire.available()){ pendingFase = Wire.read(); faseCambiata = true; } }
 void onRequest() { Wire.write(buttonFlags); buttonFlags = 0; }
@@ -31,10 +31,9 @@ void loop() {
   for (int i=0; i<3; i++) {
     if (digitalRead(pedoni[i].pinPulsante) == LOW) buttonFlags |= (1 << i);
 
-    if (pedState[i] == 1) { // Verde
-      if (now - lastBeep >= 300) { lastBeep = now; beepOn = !beepOn; }
-      if (beepOn) tone(pedoni[i].pinBuzzer, 1000); else noTone(pedoni[i].pinBuzzer);
-    } else if (pedState[i] == 2) { // Giallo
+    if (pedState[i] == 1) { // Verde: Bip
+      if ((now / 250) % 2) tone(pedoni[i].pinBuzzer, 1000); else noTone(pedoni[i].pinBuzzer);
+    } else if (pedState[i] == 2) { // Giallo: Fisso
       tone(pedoni[i].pinBuzzer, 1800);
     } else {
       noTone(pedoni[i].pinBuzzer);
@@ -43,15 +42,17 @@ void loop() {
 }
 
 void aggiornaLed(uint8_t f) {
-  for(int i=0; i<3; i++) pedState[i] = 0;
+  for(int i=0; i<3; i++) pedState[i] = 0; // Tutti Rosso
 
-  if (f == 6) { // FASE EMERGENZA: Tutti i pedoni VERDI
+  if (f == 7) { // A1_VERDE: Tutti verdi
     pedState[0] = 1; pedState[1] = 1; pedState[2] = 1;
+  } else if (f == 8) { // A1_GIALLO: Principali Gialli, Secondario resta Verde
+    pedState[0] = 2; pedState[1] = 2; pedState[2] = 1;
   } else {
-    if(f == 0) pedState[2] = 1;      
-    else if(f == 1) pedState[2] = 2; 
-    else if(f == 3) pedState[0] = 1; 
-    else if(f == 4) pedState[0] = 2; 
+    if(f == 0) pedState[2] = 1;
+    else if(f == 1) pedState[2] = 2;
+    else if(f == 3) pedState[0] = 1;
+    else if(f == 4) pedState[0] = 2;
   }
 
   for(int i=0; i<3; i++) {

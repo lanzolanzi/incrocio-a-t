@@ -1,3 +1,5 @@
+//MASTER
+
 #include <Wire.h>
 #define SLAVE_ADDR 0x08
 
